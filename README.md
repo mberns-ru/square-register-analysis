@@ -121,8 +121,26 @@ app runs in **local mode** with no sign-in, reading CSVs as described above.
    Never put the secret (`service_role`) key in the app. Row-level security only protects data when the app uses the
    publishable key.
 
-Creating an account asks for a name, business name, email and password. A database trigger creates the
-business and makes that user its owner. By default Supabase emails a confirmation link before the first
+#### Sign in with Google (optional)
+
+The **Continue with Google** button appears on its own once Google is switched on in Supabase:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), set up the **OAuth consent screen**
+   (**APIs & Services → OAuth consent screen**, External), then go to **Credentials → Create credentials →
+   OAuth client ID**, choose **Web application**, and add this **Authorized redirect URI**:
+   `https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback` (it's shown on Supabase's Google provider page).
+2. In Supabase, open **Authentication → Sign In / Providers → Google**, turn it on, and paste the client ID and
+   client secret.
+3. In **Authentication → URL Configuration → Redirect URLs**, add `https://squareanalysis.streamlit.app/**`
+   (and `http://localhost:8501/**` for local work).
+4. Add `APP_URL = "https://squareanalysis.streamlit.app"` to the app's secrets so Google sends people back to
+   the right address.
+
+People who sign up with Google name their business on the next screen. The flow uses PKCE: the one-time
+verifier stays on the server for 10 minutes and is matched up when Google sends the browser back.
+
+Creating an account with email asks for a name, business name, email and password. A database trigger creates
+the business and makes that user its owner. By default Supabase emails a confirmation link before the first
 sign-in; you can turn that off under **Authentication → Sign In / Providers → Email**.
 
 ## How it works

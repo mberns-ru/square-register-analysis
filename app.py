@@ -32,6 +32,7 @@ T.inject()
 # Accounts (Supabase). Without SUPABASE_URL / SUPABASE_ANON_KEY the app runs in local mode.
 # ----------------------------------------------------------------------------
 if auth.enabled():
+    auth.finish_oauth_if_returning()  # back from Google with ?code=...
     if auth.current() is None:
         login.render()
         st.stop()

@@ -100,7 +100,7 @@ def render(ctx=None) -> None:
         T.card_header("Preview", "How cards and charts look with the current scheme", pill=cur["preset"])
         a, b = st.columns(2)
         with a:
-            st.markdown(T.kpi_block("$24,746", 6.2, "net sales vs last month")
+            st.markdown(T.kpi_block("$18,240", 6.2, "net sales vs last month")
                         + T.kpi_block("2,190", -3.1, "transactions"), unsafe_allow_html=True)
         with b:
             st.markdown(T.progress_bars([("Cold Beverages", 1, "25%"), ("Lunch", .84, "21%"),

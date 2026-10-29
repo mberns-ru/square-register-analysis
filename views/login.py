@@ -38,13 +38,41 @@ def _hero() -> None:
   </div>
   <div style="position:absolute;left:34px;right:34px;bottom:28px;display:flex;gap:12px">
     <div style="flex:1;background:rgba(255,255,255,.14);border-radius:16px;padding:12px 14px">
-      <div style="font-size:.7rem;opacity:.8">Net sales</div><div style="font-size:1.25rem;font-weight:600">↑ $24,746</div></div>
+      <div style="font-size:.7rem;opacity:.8">Net sales</div><div style="font-size:1.25rem;font-weight:600">↑ $18,240</div></div>
     <div style="flex:1;background:rgba(255,255,255,.14);border-radius:16px;padding:12px 14px">
       <div style="font-size:.7rem;opacity:.8">Best day</div><div style="font-size:1.25rem;font-weight:600">Sat</div></div>
     <div style="flex:1;background:rgba(255,255,255,.14);border-radius:16px;padding:12px 14px">
       <div style="font-size:.7rem;opacity:.8">Margin</div><div style="font-size:1.25rem;font-weight:600">18%</div></div>
   </div>
 </div>""", unsafe_allow_html=True)
+
+
+GOOGLE_G = ('<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">'
+            '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 '
+            '5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>'
+            '<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 '
+            '7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>'
+            '<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 '
+            '20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>'
+            '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 '
+            '0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>')
+
+
+def _google_button(mode: str) -> None:
+    """'Continue with Google' (only shown once the Google provider is enabled in Supabase)."""
+    if not auth.google_enabled():
+        return
+    try:
+        url = auth.google_sign_in_url()
+    except Exception as e:  # noqa: BLE001
+        st.caption(f"Google sign-in is unavailable right now ({e}).")
+        return
+    label = "Continue with Google" if mode == "signin" else "Sign up with Google"
+    # target=_top: the hosted app runs in a frame, and Google won't load inside one.
+    st.markdown(
+        f'<a class="google-btn" href="{T.esc(url)}" target="_top" rel="noopener">{GOOGLE_G}<span>{label}</span></a>'
+        f'<div class="or-divider"><span>or {"use your email" if mode == "signin" else "sign up with email"}</span></div>',
+        unsafe_allow_html=True)
 
 
 def _error(e: Exception) -> None:
@@ -71,8 +99,8 @@ def _signin() -> None:
 def _signup() -> None:
     with st.form("signup_form", border=False):
         a, b = st.columns(2)
-        name = a.text_input("Your name", placeholder="Madeline Berns", key="su_name")
-        biz = b.text_input("Business name", placeholder="Friends Cafe", key="su_biz")
+        name = a.text_input("Your name", placeholder="Sam Rivera", key="su_name")
+        biz = b.text_input("Business name", placeholder="Maple Street Coffee", key="su_biz")
         email = st.text_input("Email", placeholder="you@yourcafe.com", key="su_email")
         a, b = st.columns(2)
         pw = a.text_input("Password", type="password", key="su_pw", help=f"At least {auth.MIN_PASSWORD} characters")
@@ -90,8 +118,9 @@ def _signup() -> None:
             st.rerun()
         except auth.AuthError as e:
             _error(e)
-    st.markdown(f'<p class="card-sub" style="text-align:center;margin-top:6px">Your data is private to your '
-                f'business. Teammates can be added later.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="card-sub" style="text-align:center;margin-top:6px">Your data is private to your '
+                'business. Teammates can be added later. Signing up with Google? You\'ll name your business next.</p>',
+                unsafe_allow_html=True)
 
 
 def _reset() -> None:
@@ -154,6 +183,10 @@ def render() -> None:
         notice = st.session_state.pop("auth_notice", None)
         if notice:
             st.success(notice, icon=":material/mark_email_read:")
+        oauth_error = st.session_state.pop("auth_error", None)
+        if oauth_error:
+            st.error(oauth_error, icon=":material/error:")
+        _google_button(mode)
         _signin() if mode == "signin" else _signup()
 
 
@@ -166,7 +199,7 @@ def render_first_business() -> None:
         T.card_header(f"Welcome{', ' + acct.full_name.split()[0] if acct.full_name else ''}!",
                       "Name your business to set up your dashboard.")
         with st.form("first_biz", border=False):
-            name = st.text_input("Business name", placeholder="Friends Cafe")
+            name = st.text_input("Business name", placeholder="Maple Street Coffee")
             go = st.form_submit_button("Create business", width="stretch")
         if go:
             try:
