@@ -11,10 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-import secrets
-import time
 from dataclasses import dataclass, field
-from urllib.parse import urlsplit
 
 import streamlit as st
 
@@ -165,19 +162,13 @@ def reset_password(email: str, code: str, new_password: str, confirm: str) -> Ac
     return _start_session(res.user)
 
 
-def sign_out() -> bool:
-    """Sign out of Supabase (and Streamlit's Google login). Returns True when the browser is being redirected,
-    in which case the caller must not st.rerun() (that would discard the redirect)."""
+def sign_out() -> None:
     try:
         client().auth.sign_out()
     except Exception:  # noqa: BLE001
         pass
-    for k in ("_sb", "account", "business_id", "auth_mode", "analyst_log", "_google_bridge_failed"):
+    for k in ("_sb", "account", "business_id", "auth_mode", "analyst_log"):
         st.session_state.pop(k, None)
-    if streamlit_google_configured() and _streamlit_logged_in():
-        st.logout()  # also clear Streamlit's Google login cookie, or the next run would sign straight back in
-        return True
-    return False
 
 
 def create_business(name: str) -> None:
@@ -217,164 +208,3 @@ def _start_session(user) -> Account:
 
 def current() -> Account | None:
     return st.session_state.get("account")
-
-
-# Sign in with Google (OAuth, PKCE flow) --------------------------------------------------------------------
-# Supabase sends the browser to Google and back to this app with ?code=...; that return trip starts a fresh
-# Streamlit session, so the one-time PKCE verifier is kept server-side for a few minutes under a random flow ID
-# that rides along in the return URL.
-OAUTH_TTL = 600  # seconds
-
-
-@st.cache_resource
-def _pending_oauth() -> dict[str, tuple[str, float]]:
-    return {}
-
-
-@st.cache_data(ttl=300, show_spinner=False)
-def _enabled_providers(url: str, key: str) -> dict:
-    import httpx
-
-    try:
-        r = httpx.get(f"{url}/auth/v1/settings", headers={"apikey": key}, timeout=5)
-        return r.json().get("external", {}) if r.status_code == 200 else {}
-    except Exception:  # noqa: BLE001
-        return {}
-
-
-def streamlit_google_configured() -> bool:
-    """True when [auth] / [auth.google] are in secrets, so Google sign-in runs through Streamlit's st.login."""
-    try:
-        a = st.secrets.get("auth")
-        return bool(a and a.get("redirect_uri") and a.get("google"))
-    except Exception:  # noqa: BLE001
-        return False
-
-
-def google_mode() -> str | None:
-    """'streamlit' (consent screen shows the app's address), 'supabase' (shows the Supabase address) or None."""
-    if not google_enabled():
-        return None
-    return "streamlit" if streamlit_google_configured() else "supabase"
-
-
-def google_enabled() -> bool:
-    """True once the Google provider is switched on in Supabase (Authentication → Sign In / Providers)."""
-    if _setting("GOOGLE_SIGN_IN") in ("0", "false", "False"):
-        return False
-    cfg = config()
-    return bool(cfg and _enabled_providers(*cfg).get("google"))
-
-
-def app_url() -> str:
-    """Where Google should send people back to. Set APP_URL in secrets to pin it (recommended when hosted)."""
-    explicit = _setting("APP_URL")
-    if explicit:
-        return explicit.rstrip("/")
-    try:
-        parts = urlsplit(st.context.url)
-        if parts.scheme and parts.netloc:
-            return f"{parts.scheme}://{parts.netloc}"
-    except Exception:  # noqa: BLE001
-        pass
-    return "http://localhost:8501"
-
-
-def google_sign_in_url() -> str:
-    """A fresh Google sign-in link for this browser session (reused until it expires)."""
-    cached = st.session_state.get("_google_url")
-    if cached and time.time() - cached[1] < OAUTH_TTL - 60:
-        return cached[0]
-    flow = secrets.token_urlsafe(18)
-    c = client()
-    res = c.auth.sign_in_with_oauth({
-        "provider": "google",
-        "options": {"redirect_to": f"{app_url()}/?auth_flow={flow}",
-                    "query_params": {"prompt": "select_account"}},
-    })
-    verifier = c.auth._storage.get_item(f"{c.auth._storage_key}-code-verifier")
-    store = _pending_oauth()
-    now = time.time()
-    for k in [k for k, (_, t) in store.items() if now - t > OAUTH_TTL]:
-        store.pop(k, None)
-    store[flow] = (verifier, now)
-    st.session_state._google_url = (res.url, now)
-    return res.url
-
-
-def finish_oauth_if_returning() -> None:
-    """Call at the top of the app: completes a Google sign-in when the browser comes back with ?code=..."""
-    qp = st.query_params
-    flow = qp.get("auth_flow")
-    if not flow or not ({"code", "error", "error_description"} & set(qp.keys())):
-        return
-    code = qp.get("code")
-    err = qp.get("error_description") or qp.get("error")
-    st.query_params.clear()
-    entry = _pending_oauth().pop(flow, None)
-    try:
-        if err:
-            raise AuthError("Google sign-in was cancelled." if "denied" in err.lower() else _friendly(Exception(err)).args[0])
-        if entry is None or time.time() - entry[1] > OAUTH_TTL:
-            raise AuthError("That Google sign-in link expired. Please try again.")
-        res = client().auth.exchange_code_for_session(
-            {"auth_code": code, "code_verifier": entry[0], "redirect_to": f"{app_url()}/?auth_flow={flow}"})
-        _start_session(res.user)
-    except AuthError as e:
-        st.session_state.auth_error = str(e)
-    except Exception as e:  # noqa: BLE001
-        st.session_state.auth_error = str(_friendly(e))
-
-
-# Sign in with Google through Streamlit (st.login) ---------------------------------------------------------------
-# Google's consent screen names the address that receives the sign-in. With st.login that's this app
-# (squareanalysis.streamlit.app) instead of the Supabase project. Streamlit verifies the Google sign-in, exposes
-# Google's ID token, and we hand that token to Supabase, which checks it and signs the user in to the database.
-# Streamlit doesn't expose the nonce it used, so Supabase's Google provider needs "Skip nonce check" turned on.
-
-def _streamlit_logged_in() -> bool:
-    try:
-        return bool(st.user.is_logged_in)
-    except Exception:  # noqa: BLE001
-        return False
-
-
-def start_streamlit_google() -> None:
-    if _streamlit_logged_in():  # a previous Google sign-in didn't reach Supabase; start over cleanly
-        st.session_state.pop("_google_bridge_failed", None)
-        st.logout()
-        return
-    st.login("google")
-
-
-def finish_streamlit_google() -> None:
-    """Call at the top of the app: when Streamlit says Google signed someone in, sign them in to Supabase too."""
-    if not streamlit_google_configured() or current() is not None or not _streamlit_logged_in():
-        return
-    if st.session_state.get("_google_bridge_failed"):
-        return
-    try:
-        token = st.user.tokens.get("id")
-    except Exception:  # noqa: BLE001
-        token = None
-    if not token:
-        st.session_state._google_bridge_failed = True
-        st.session_state.auth_error = ('Google sign-in worked, but no ID token came back. Add expose_tokens = ["id"] '
-                                       "under [auth] in the app's secrets.")
-        return
-    try:
-        res = client().auth.sign_in_with_id_token({"provider": "google", "token": token})
-        _start_session(res.user)
-    except Exception as e:  # noqa: BLE001
-        msg = str(getattr(e, "message", "") or e)
-        st.session_state._google_bridge_failed = True
-        if re.search(r"nonce", msg, re.I):
-            st.session_state.auth_error = ("Google sign-in needs one more Supabase setting: turn on Skip nonce check "
-                                           "under Authentication → Sign In / Providers → Google.")
-        elif re.search(r"audience|aud\b|client.?id", msg, re.I):
-            st.session_state.auth_error = ("Supabase doesn't recognise this Google client. Add its client ID under "
-                                           "Authentication → Sign In / Providers → Google → Client IDs.")
-        elif re.search(r"expired|\bexp\b", msg, re.I):
-            st.session_state.auth_error = "Your Google sign-in expired. Please sign in again."
-        else:
-            st.session_state.auth_error = str(_friendly(e))

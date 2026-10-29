@@ -178,10 +178,6 @@ section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
   background: rgba(255,255,255,.14) !important; border: 1px solid {SB_LINE} !important; }}
 section[data-testid="stSidebar"] .stButton > button[kind="secondary"] * {{ color: {SB_TEXT} !important; }}
 div.st-key-sb_account {{ background: rgba(255,255,255,.10); border: 1px solid {SB_LINE}; border-radius: 14px; padding: 12px; }}
-div.st-key-google_btn a, div.st-key-google_btn button {{ border: 1px solid {LINE} !important; border-radius: 999px !important;
-  background-color: #fff !important; padding: 9px 16px 9px 44px !important; position: relative; }}
-div.st-key-google_btn a:hover, div.st-key-google_btn button:hover {{ background-color: {TINT} !important; border-color: {LAVENDER} !important; }}
-div.st-key-google_btn a p, div.st-key-google_btn button p {{ color: {INK} !important; font-weight: 500; font-size: .92rem; }}
 .or-divider {{ display: flex; align-items: center; gap: 10px; color: {MUTED}; font-size: .74rem; margin: 14px 0 4px 0; }}
 .or-divider::before, .or-divider::after {{ content: ""; flex: 1; height: 1px; background: {LINE}; }}
 div.st-key-card_auth {{ padding: 30px 32px 24px 32px; min-height: 560px; }}
