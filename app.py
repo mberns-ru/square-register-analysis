@@ -22,10 +22,22 @@ st.set_page_config(page_title="Databased · Sales Dashboard", page_icon="📊", 
 
 from core import theme as T  # noqa: E402
 from core.data import Ctx, filter_range, load_dataset, local_sources, signature  # noqa: E402
-from views import analyst, expenses, forecast, items, overview, refunds, reports, seasonality, settings  # noqa: E402
+from core import auth  # noqa: E402
+from views import analyst, expenses, forecast, items, login, overview, refunds, reports, seasonality, settings  # noqa: E402
 
 settings.apply_query_params()  # ?theme=ocean etc. in the URL
 T.inject()
+
+# ----------------------------------------------------------------------------
+# Accounts (Supabase). Without SUPABASE_URL / SUPABASE_ANON_KEY the app runs in local mode.
+# ----------------------------------------------------------------------------
+if auth.enabled():
+    if auth.current() is None:
+        login.render()
+        st.stop()
+    if not auth.current().businesses:
+        login.render_first_business()
+        st.stop()
 
 # ----------------------------------------------------------------------------
 # Data sources: uploads win; otherwise read the local data/ folder if present
@@ -52,6 +64,9 @@ pages = {
 }
 st.session_state._pages = pages
 nav = st.navigation(list(pages.values()), position="sidebar")
+login.sidebar_account()
+if not auth.enabled():
+    st.sidebar.caption("Local mode: accounts are off. Add Supabase keys to turn on sign-in.")
 
 with st.sidebar:
     with st.expander("Data", icon=":material/upload:"):
