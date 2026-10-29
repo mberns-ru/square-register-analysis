@@ -10,6 +10,7 @@ import streamlit as st
 from core import theme as T
 from core.data import Ctx, WEEKDAYS, filter_range
 from core.expenses import book, daily_allocation
+from views import analyst
 
 
 def _calendar_html(daily: pd.DataFrame, year: int, month: int) -> str:
@@ -106,7 +107,7 @@ def render(ctx: Ctx) -> None:
             roll = d["Net Sales"].rolling(ctx.window, min_periods=1).mean()
             fig.add_scatter(x=d.index, y=roll, name="This period", mode="lines",
                             line=dict(color=T.INDIGO, width=2.6, shape="spline", smoothing=0.8),
-                            fill="tozeroy", fillcolor="rgba(91,91,214,0.10)")
+                            fill="tozeroy", fillcolor=T.rgba(T.INDIGO, 0.10))
             if not last_year.empty:
                 ly = last_year["Net Sales"].rolling(ctx.window, min_periods=1).mean()
                 ly.index = ly.index + pd.DateOffset(years=1)
@@ -134,7 +135,7 @@ def render(ctx: Ctx) -> None:
                 it = it.assign(Cat=it["Category"].where(it["Category"].isin(top), "Other"))
                 pv = it.pivot_table(index="M", columns="Cat", values="Net Sales", aggfunc="sum").fillna(0)
                 fig = go.Figure()
-                cols = [T.INDIGO, T.LAVENDER, T.ORANGE, T.PEACH, "#C9CBE0"]
+                cols = [T.INDIGO, T.LAVENDER, T.ORANGE, T.PEACH, T.NEUTRAL]
                 for i, c in enumerate([*top, "Other"]):
                     if c in pv:
                         fig.add_bar(y=pv.index.strftime("%b").str.upper(), x=pv[c], name=c, orientation="h",
@@ -196,10 +197,9 @@ def render(ctx: Ctx) -> None:
             st.markdown(f'<p class="card-sub" style="text-align:center">{T.esc(caption)}</p>', unsafe_allow_html=True)
             if st.button("Ask why", width="stretch", key="ov_askwhy"):
                 ly_end = pd.Timestamp(ctx.end) - pd.DateOffset(years=1)
-                st.session_state.pending_q = (f"Why were net sales {'up' if ratio >= 1 else 'down'} "
-                                              f"in {ctx.end:%B %Y} vs {ly_end:%B %Y}?" if ly_net > 0 else
-                                              f"Why was {ctx.end:%B %Y} different from the month before?")
-                st.switch_page(st.session_state._pages["AI analyst"])
+                analyst.ask_from_anywhere(f"Why were net sales {'up' if ratio >= 1 else 'down'} "
+                                          f"in {ctx.end:%B %Y} vs {ly_end:%B %Y}?" if ly_net > 0 else
+                                          f"Why was {ctx.end:%B %Y} different from the month before?")
 
         with st.container(key="card_hours"):
             T.card_header("Busiest hours", "Net sales by hour of day")
@@ -218,20 +218,19 @@ def render(ctx: Ctx) -> None:
         with st.container(key="card_search"):
             def _ask():
                 if st.session_state.ov_q.strip():
+                    # callbacks run before the script, so the analyst panel at the top picks this up
                     st.session_state.pending_q = st.session_state.ov_q.strip()
-                    st.session_state.go_analyst = True
+                    st.session_state.analyst_open = True
                 st.session_state.ov_q = ""
             st.text_input("Ask", placeholder="🔍  Ask the analyst… e.g. why was August slow?",
                           label_visibility="collapsed", key="ov_q", on_change=_ask)
-            if st.session_state.pop("go_analyst", False):
-                st.switch_page(st.session_state._pages["AI analyst"])
 
         with st.container(key="card_yoy"):
             T.card_header("Monthly net sales", "This year and last year")
             mon = ctx.daily_all["Net Sales"].resample("MS").sum()
             y1 = pd.Timestamp(ctx.end).year
             fig = go.Figure()
-            for y, col, fillc in [(y1, T.INDIGO, "rgba(91,91,214,.18)"), (y1 - 1, T.ORANGE, "rgba(238,138,78,.18)")]:
+            for y, col, fillc in [(y1, T.INDIGO, T.rgba(T.INDIGO, .18)), (y1 - 1, T.ORANGE, T.rgba(T.ORANGE, .18))]:
                 s = mon[mon.index.year == y]
                 if s.empty:
                     continue

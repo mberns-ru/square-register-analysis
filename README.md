@@ -7,6 +7,8 @@ answers questions like *"Why was August slow?"* in plain language.
 
 Built by **Advait Ashtikar, Madeline Berns and Andy Chen**.
 
+**[Try the live app → squareanalysis.streamlit.app](https://squareanalysis.streamlit.app/)**
+
 ![Overview](docs/screenshots/overview.png)
 
 ## Why
@@ -26,19 +28,23 @@ Square's own exports directly means the owner has one source and no setup.
 | **Refunds** | Amount, count and refund rate; reasons; when refunds happen; each refund linked to its original payment |
 | **Forecast** | Next 14–90 days of net sales with a backtested error band, expected transactions by weekday and daypart for staffing, and an item prep list |
 | **Seasonality** | Year-over-year monthly sales, a seasonal index, a weekday × hour heatmap and the daypart mix by month |
-| **AI analyst** | Ask questions in plain language. Answers use only approved metric functions, and every answer shows the calls it made and the date range |
+| **AI analyst** | A full-width, collapsible panel at the top of every page. Ask questions in plain language; answers use only approved metric functions, and every answer shows the calls it made and the date range |
 | **Reports** | Monthly profit and loss, CSV exports, a printable monthly report, and a data-quality summary |
+| **Settings** | Change the color scheme: six presets (Lavender, Ocean, Forest, Sunset, Plum, Graphite) or your own primary, accent, background and sidebar colors, with a live preview |
 
 <table>
 <tr><td><img src="docs/screenshots/analyst.png" alt="AI analyst"></td><td><img src="docs/screenshots/expenses.png" alt="Expense capture"></td></tr>
 <tr><td align="center">AI analyst</td><td align="center">AI-assisted expense capture</td></tr>
 <tr><td><img src="docs/screenshots/items.png" alt="Items"></td><td><img src="docs/screenshots/forecast.png" alt="Forecast"></td></tr>
 <tr><td align="center">Item performance</td><td align="center">Forecast</td></tr>
+<tr><td><img src="docs/screenshots/settings.png" alt="Settings"></td><td></td></tr>
+<tr><td align="center">Settings: color schemes</td><td></td></tr>
 </table>
 
 ## Getting started
 
-Requires Python 3.10+.
+The quickest way to try it is the hosted app at **<https://squareanalysis.streamlit.app/>**. To run it yourself
+you need Python 3.10+.
 
 ```bash
 git clone https://github.com/mberns-ru/square-register-analysis.git
@@ -62,6 +68,13 @@ The app opens at <http://localhost:8501>.
 
 `data/` is git-ignored, so customer data never gets committed. Uploading the same month twice is safe because
 duplicates are dropped.
+
+### Color schemes
+
+Pick a scheme on the **Settings** page. It lasts for your browser session. To keep one, bookmark the app with
+`?theme=ocean` (or any preset name) added to the address, or for custom colors
+`?theme=custom&primary=1F6FB2&accent=20A99B&canvas=E3EDF6&sidebar=17507F`. The Settings page shows the exact
+link for the scheme you're using.
 
 ### Optional: turn on Claude
 
@@ -123,8 +136,7 @@ core/
   metrics.py        approved metric functions (the analyst's only data access)
   analyst.py        question → metric calls (Claude tool use or rule-based)
   expenses.py       expense book, allocation by day, purchase drafting
-views/              one module per page
-assets/             logo
+views/              one module per page (analyst.py is the panel at the top; settings.py the color schemes)
 docs/screenshots/   images used in this README
 ```
 

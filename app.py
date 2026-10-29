@@ -14,8 +14,6 @@ metric calls and read receipts. Without it, a built-in rule-based planner is use
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 
@@ -24,15 +22,16 @@ st.set_page_config(page_title="Databased · Sales Dashboard", page_icon="📊", 
 
 from core import theme as T  # noqa: E402
 from core.data import Ctx, filter_range, load_dataset, local_sources, signature  # noqa: E402
-from views import analyst, expenses, forecast, items, overview, refunds, reports, seasonality  # noqa: E402
+from views import analyst, expenses, forecast, items, overview, refunds, reports, seasonality, settings  # noqa: E402
 
+settings.apply_query_params()  # ?theme=ocean etc. in the URL
 T.inject()
 
 # ----------------------------------------------------------------------------
 # Data sources: uploads win; otherwise read the local data/ folder if present
 # ----------------------------------------------------------------------------
-ASSETS = Path(__file__).resolve().parent / "assets"
-st.logo(str(ASSETS / "logo.svg"), size="large", icon_image=str(ASSETS / "icon.svg"))
+logo, icon = T.logo_files()
+st.logo(logo, size="large", icon_image=icon)
 
 pages = {
     "Overview": st.Page(lambda: overview.render(st.session_state._ctx), title="Overview", icon=":material/home:",
@@ -47,10 +46,9 @@ pages = {
                         icon=":material/trending_up:", url_path="forecast"),
     "Seasonality": st.Page(lambda: seasonality.render(st.session_state._ctx), title="Seasonality",
                            icon=":material/calendar_month:", url_path="seasonality"),
-    "AI analyst": st.Page(lambda: analyst.render(st.session_state._ctx), title="AI analyst",
-                          icon=":material/auto_awesome:", url_path="analyst"),
     "Reports": st.Page(lambda: reports.render(st.session_state._ctx), title="Reports",
                        icon=":material/description:", url_path="reports"),
+    "Settings": st.Page(settings.render, title="Settings", icon=":material/settings:", url_path="settings"),
 }
 st.session_state._pages = pages
 nav = st.navigation(list(pages.values()), position="sidebar")
@@ -66,6 +64,10 @@ tx_src = [(f.name, f.getvalue()) for f in tx_files] if tx_files else local_sourc
 it_src = [(f.name, f.getvalue()) for f in item_files] if item_files else local_sources("items")
 ds = load_dataset((signature(tx_src), signature(it_src)), tx_src, it_src)
 tx_all, items_all, tx_rep, it_rep, daily_all = ds["tx"], ds["items"], ds["tx_report"], ds["items_report"], ds["daily"]
+
+if nav.title == "Settings":  # works with or without data loaded
+    nav.run()
+    st.stop()
 
 if tx_all.empty and items_all.empty:
     T.page_header("Welcome to Databased", "")
@@ -103,4 +105,5 @@ st.session_state._ctx = Ctx(
     start=start, end=end, window=window, tx_report=tx_rep, items_report=it_rep,
 )
 
+analyst.render_panel(st.session_state._ctx)  # full-width, collapsible, on every data page
 nav.run()

@@ -101,7 +101,7 @@ def render(ctx: Ctx) -> None:
                         line=dict(color=T.INDIGO, width=2.4, shape="spline"))
         fig.add_bar(x=hist.index, y=hist, name="Actual daily", marker=dict(color=T.LAVENDER_SOFT), hoverinfo="skip")
         fig.add_scatter(x=list(f.index) + list(f.index[::-1]), y=list(hi) + list(lo[::-1]), fill="toself",
-                        fillcolor="rgba(238,138,78,.16)", line=dict(width=0), name="Likely range", hoverinfo="skip")
+                        fillcolor=T.rgba(T.ORANGE, .16), line=dict(width=0), name="Likely range", hoverinfo="skip")
         fig.add_scatter(x=f.index, y=f, name="Forecast", mode="lines+markers",
                         line=dict(color=T.ORANGE, width=2.4), marker=dict(size=5))
         if ly.notna().any():
@@ -122,7 +122,7 @@ def render(ctx: Ctx) -> None:
         adj = midx[next_m] / midx.reindex(t["Day"].dt.month).mean()
         grid = (grid * adj).reindex(index=WEEKDAYS, columns=DAYPARTS).fillna(0)
         fig = go.Figure(go.Heatmap(z=grid.values, x=grid.columns, y=[w[:3] for w in grid.index],
-                                   colorscale=[[0, "#F3F4FD"], [0.5, T.LAVENDER], [1, T.INDIGO]],
+                                   colorscale=[[0, T.TINT], [0.5, T.LAVENDER], [1, T.INDIGO]],
                                    text=grid.round(0).astype(int).values, texttemplate="%{text}",
                                    textfont=dict(size=11), showscale=False, xgap=4, ygap=4,
                                    hovertemplate="%{y} %{x}: ~%{z:.0f} transactions<extra></extra>"))

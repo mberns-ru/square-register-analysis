@@ -72,7 +72,7 @@ def render(ctx: Ctx) -> None:
         g = g.loc[:, g.sum() > g.values.sum() * 0.002]
         fig = go.Figure(go.Heatmap(z=g.values, x=[f"{int(h) % 12 or 12}{'a' if h < 12 else 'p'}" for h in g.columns],
                                    y=[w[:3] for w in WEEKDAYS],
-                                   colorscale=[[0, "#F5F6FE"], [0.45, T.LAVENDER], [0.8, T.INDIGO], [1, T.ORANGE]],
+                                   colorscale=[[0, T.TINT], [0.45, T.LAVENDER], [0.8, T.INDIGO], [1, T.ORANGE]],
                                    showscale=False, xgap=3, ygap=3,
                                    hovertemplate="%{y} %{x}: %{z:$,.0f}/week<extra></extra>"))
         fig.update_yaxes(autorange="reversed", showgrid=False)
