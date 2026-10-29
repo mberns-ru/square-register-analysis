@@ -1,4 +1,8 @@
-# Databased: Square Register Sales Analytics
+<p align="center"><img src="assets/logo.png" alt="Square Register Analysis logo" width="260"></p>
+
+# Square Register Analysis
+
+*by Databased*
 
 A browser dashboard that helps small food and beverage businesses understand their sales without needing a
 statistics background. Upload the monthly CSV exports from a Square register and Databased turns them into

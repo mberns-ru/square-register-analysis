@@ -23,10 +23,10 @@ def _hero() -> None:
 <div style="background: linear-gradient(150deg, {c['SIDEBAR']} 0%, {c['INDIGO']} 60%, {T.mix(c['INDIGO'], c['ORANGE'], .35)} 130%);
             border-radius: 24px; padding: 34px 34px 28px 34px; color: #fff; min-height: 560px; position: relative; overflow: hidden;">
   <div style="display:flex;align-items:center;gap:10px">
-    <div style="width:40px;height:40px;border-radius:50%;background:#fff;color:{c['INDIGO']};font-weight:700;
-                display:flex;align-items:center;justify-content:center">DB</div>
-    <div><div style="font-weight:600;font-size:1.1rem;line-height:1.1">Databased</div>
-         <div style="font-size:.75rem;opacity:.8">Square sales analytics</div></div>
+    <img src="{T.mark_data_uri()}" alt="" style="width:52px;height:52px;border-radius:14px;
+         box-shadow:0 4px 14px rgba(0,0,0,.18)">
+    <div><div style="font-weight:700;font-size:1.15rem;line-height:1.15">{T.APP_NAME}</div>
+         <div style="font-size:.75rem;opacity:.8">by Databased</div></div>
   </div>
   <div style="font-size:2rem;font-weight:600;line-height:1.2;margin:56px 0 14px 0">Your Square sales,<br>finally explained.</div>
   <div style="opacity:.88;font-size:.95rem;max-width:400px">Upload your monthly exports and see sales, profit, refunds
