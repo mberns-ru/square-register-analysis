@@ -23,10 +23,16 @@ st.set_page_config(page_title="Databased · Sales Dashboard", page_icon="📊", 
 from core import theme as T  # noqa: E402
 from core.data import Ctx, filter_range, load_dataset, local_sources, signature  # noqa: E402
 from core import auth  # noqa: E402
-from views import analyst, expenses, forecast, items, login, overview, refunds, reports, seasonality, settings  # noqa: E402
+from views import analyst, expenses, forecast, items, legal, login, overview, refunds, reports, seasonality, settings  # noqa: E402,E501
 
 settings.apply_query_params()  # ?theme=ocean etc. in the URL
 T.inject()
+
+# Public pages: readable without signing in (Google's consent screen links to them).
+LEGAL = {
+    "privacy": st.Page(legal.render_privacy, title="Privacy Policy", icon=":material/shield:", url_path="privacy"),
+    "terms": st.Page(legal.render_terms, title="Terms of Service", icon=":material/gavel:", url_path="terms"),
+}
 
 # ----------------------------------------------------------------------------
 # Accounts (Supabase). Without SUPABASE_URL / SUPABASE_ANON_KEY the app runs in local mode.
@@ -34,11 +40,13 @@ T.inject()
 if auth.enabled():
     auth.finish_oauth_if_returning()  # back from Supabase's Google flow with ?code=...
     auth.finish_streamlit_google()    # signed in with Google via st.login: sign in to Supabase too
-    if auth.current() is None:
-        login.render()
-        st.stop()
-    if not auth.current().businesses:
-        login.render_first_business()
+    if auth.current() is None or not auth.current().businesses:
+        gate = (st.Page(login.render, title="Sign in", icon=":material/login:", url_path="signin", default=True)
+                if auth.current() is None else
+                st.Page(login.render_first_business, title="Welcome", icon=":material/storefront:",
+                        url_path="welcome", default=True))
+        st.session_state._legal_pages = {**LEGAL, "home": gate}
+        st.navigation([gate, *LEGAL.values()], position="hidden").run()
         st.stop()
 
 # ----------------------------------------------------------------------------
@@ -65,7 +73,8 @@ pages = {
     "Settings": st.Page(settings.render, title="Settings", icon=":material/settings:", url_path="settings"),
 }
 st.session_state._pages = pages
-nav = st.navigation(list(pages.values()), position="sidebar")
+st.session_state._legal_pages = {**LEGAL, "home": pages["Overview"]}
+nav = st.navigation({"": list(pages.values()), "About": list(LEGAL.values())}, position="sidebar")
 login.sidebar_account()
 if not auth.enabled():
     st.sidebar.caption("Local mode: accounts are off. Add Supabase keys to turn on sign-in.")
@@ -82,7 +91,7 @@ it_src = [(f.name, f.getvalue()) for f in item_files] if item_files else local_s
 ds = load_dataset((signature(tx_src), signature(it_src)), tx_src, it_src)
 tx_all, items_all, tx_rep, it_rep, daily_all = ds["tx"], ds["items"], ds["tx_report"], ds["items_report"], ds["daily"]
 
-if nav.title == "Settings":  # works with or without data loaded
+if nav.url_path in ("settings", "privacy", "terms"):  # work with or without data loaded
     nav.run()
     st.stop()
 

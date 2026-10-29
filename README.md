@@ -148,7 +148,9 @@ The app then hands Google's ID token to Supabase, which verifies it and signs th
    server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
    ```
 
-4. *(Optional)* In **Google Auth Platform → Branding**, set the app name to "Databased" and add a logo.
+4. *(Optional)* In **Google Auth Platform → Branding**, set the app name to "Databased", add a logo, and use
+   `https://squareanalysis.streamlit.app/privacy` and `https://squareanalysis.streamlit.app/terms` as the privacy
+   policy and terms of service links.
 
 Without the `[auth]` section, the button falls back to Supabase's own Google flow, which opens in a new tab and
 shows the Supabase address on the consent screen. People who sign up with Google name their business on the next
@@ -305,6 +307,12 @@ docs/screenshots/   images used in this README
 - Loss and waste detection from expected vs actual usage
 - Multi-location and multi-business support
 - Benchmarking against similar cafes
+
+## Privacy and terms
+
+The [Privacy Policy](docs/legal/privacy.md) and [Terms of Service](docs/legal/terms.md) are also public pages in the
+app at `/privacy` and `/terms`, readable without signing in. Update the files in `docs/legal/` when the app's data
+handling changes, for example once uploads are saved to the database.
 
 ## Data
 

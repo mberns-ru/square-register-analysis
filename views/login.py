@@ -204,6 +204,9 @@ def render() -> None:
             st.error(oauth_error, icon=":material/error:")
         _google_button(mode)
         _signin() if mode == "signin" else _signup()
+    with right:
+        from views import legal
+        legal.footer_links()
 
 
 def render_first_business() -> None:
@@ -223,6 +226,8 @@ def render_first_business() -> None:
                 st.rerun()
             except auth.AuthError as e:
                 _error(e)
+        from views import legal
+        legal.footer_links()
         if st.button("Sign out", type="tertiary"):
             if not auth.sign_out():
                 st.rerun()
