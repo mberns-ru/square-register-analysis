@@ -51,6 +51,13 @@ def _error(e: Exception) -> None:
     st.error(str(e), icon=":material/error:")
 
 
+def _go_signup(email: str = "") -> None:
+    st.session_state.auth_mode = "signup"
+    if email:
+        st.session_state.su_email = email.strip()
+    st.session_state.pop("si_no_account", None)
+
+
 def _signin() -> None:
     with st.form("signin_form", border=False):
         email = st.text_input("Email", placeholder="you@yourcafe.com", key="si_email")
@@ -60,12 +67,22 @@ def _signin() -> None:
         try:
             with st.spinner("Signing in…"):
                 auth.sign_in(email, pw)
+            st.session_state.pop("si_no_account", None)
             st.rerun()
         except auth.AuthError as e:
             _error(e)
-    if st.button("Forgot your password?", type="tertiary", key="to_reset"):
+            # Most often this means there's no account yet: offer to create one with the same email.
+            st.session_state.si_no_account = email.strip() if "don't match" in str(e) else None
+    missing = st.session_state.get("si_no_account")
+    if missing:
+        st.button(f"New here? Create an account for {missing}", key="si_to_signup", width="stretch",
+                  type="secondary", on_click=_go_signup, args=(missing,))
+    c1, c2 = st.columns(2)
+    if c1.button("Forgot your password?", type="tertiary", key="to_reset"):
         st.session_state.auth_mode = "reset"
         st.rerun()
+    if not missing:
+        c2.button("New here? Create an account", type="tertiary", key="si_new", on_click=_go_signup)
 
 
 def _signup() -> None:

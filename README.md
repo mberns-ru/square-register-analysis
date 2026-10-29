@@ -126,8 +126,14 @@ app runs in **local mode** with no sign-in, reading CSVs as described above.
    publishable key.
 
 Creating an account asks for a name, business name, email and password. A database trigger creates
-the business and makes that user its owner. By default Supabase emails a confirmation link before the first
-sign-in; you can turn that off under **Authentication → Sign In / Providers → Email**.
+the business and makes that user its owner.
+
+**Email delivery.** Supabase's built-in email sender only delivers to members of your Supabase organization's
+team, and only a few messages an hour. With **Confirm email** on (the default), sign-ups from anyone else fail
+with "Error sending confirmation email", and password-reset codes don't arrive either. Either turn off
+**Authentication → Sign In / Providers → Email → Confirm email** (fine for a class demo; people can then sign up
+with any address), or connect a real email service under **Authentication → Emails → SMTP Settings** (for example
+[Resend](https://resend.com), which has a free tier).
 
 ## How it works
 
