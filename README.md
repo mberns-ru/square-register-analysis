@@ -136,7 +136,9 @@ The **Continue with Google** button appears on its own once Google is switched o
 4. Add `APP_URL = "https://squareanalysis.streamlit.app"` to the app's secrets so Google sends people back to
    the right address.
 
-People who sign up with Google name their business on the next screen. The flow uses PKCE: the one-time
+Google opens in a new tab: Streamlit Cloud runs the app inside a sandboxed frame that isn't allowed to send the
+whole page to Google, so sign-in finishes in that new tab. People who sign up with Google name their business on
+the next screen. The flow uses PKCE: the one-time
 verifier stays on the server for 10 minutes and is matched up when Google sends the browser back.
 
 Creating an account with email asks for a name, business name, email and password. A database trigger creates
