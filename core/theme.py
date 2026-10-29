@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import functools
 import html
 import tempfile
 from pathlib import Path
@@ -155,7 +157,7 @@ section[data-testid="stSidebar"] .stSelectbox svg {{ color: {INK} !important; }}
 section[data-testid="stSidebar"] [data-baseweb="select"] * {{ color: {INK} !important; }}
 div[class*="st-key-cal_"] button {{ background: transparent !important; color: {ORANGE} !important; font-size: 1.3rem; padding: 0 .4rem; min-height: 0; }}
 div[class*="st-key-cal_"] button:disabled {{ color: {LINE} !important; }}
-section[data-testid="stSidebar"] [data-testid="stLogo"] {{ height: 2.6rem; max-width: 100%; }}
+section[data-testid="stSidebar"] img[data-testid="stSidebarLogo"] {{ height: 3rem !important; width: auto; max-width: 100%; }}
 section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {{
   background: rgba(255,255,255,.10); border: 1px dashed {SB_LINE};
 }}
@@ -386,23 +388,29 @@ def pct(a: float, b: float) -> float | None:
     return (a - b) / abs(b) * 100
 
 
+ASSETS = Path(__file__).resolve().parent.parent / "assets"
+APP_NAME = "Square Register Analysis"
+
+
+@functools.lru_cache(maxsize=1)
+def mark_data_uri() -> str:
+    """The logo mark (register + charts) as a small inline image."""
+    return "data:image/png;base64," + base64.b64encode((ASSETS / "favicon.png").read_bytes()).decode()
+
+
 def logo_files() -> tuple[str, str]:
-    """Write the logo in the current colors (sidebar text color, primary monogram) and return file paths."""
+    """Sidebar lockup (logo mark + name in the sidebar's text color) and the collapsed-sidebar icon."""
     c = palette()
     folder = Path(tempfile.gettempdir()) / "databased-logos"
     folder.mkdir(exist_ok=True)
-    tag = (c["INDIGO"] + c["SB_TEXT"] + c["SIDEBAR"]).replace("#", "")
-    logo, icon = folder / f"logo-{tag}.svg", folder / f"icon-{tag}.svg"
-    disc = "#FFFFFF" if c["SB_TEXT"].upper() != c["INK"].upper() else c["INDIGO"]
-    mono = c["INDIGO"] if disc == "#FFFFFF" else "#FFFFFF"
-    badge = (f'<circle cx="22" cy="22" r="20" fill="{disc}"/><text x="22" y="28" text-anchor="middle" '
-             f'font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="15" fill="{mono}">DB</text>')
+    tag = c["SB_TEXT"].replace("#", "")
+    logo = folder / f"lockup-{tag}.svg"
     if not logo.exists():
         logo.write_text(
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="220" height="44" viewBox="0 0 220 44">{badge}'
-            f'<text x="52" y="21" font-family="Poppins,Arial,sans-serif" font-weight="600" font-size="18" '
-            f'fill="{c["SB_TEXT"]}">Databased</text><text x="52" y="37" font-family="Poppins,Arial,sans-serif" '
-            f'font-size="11" fill="{c["SB_TEXT"]}" fill-opacity=".75">Square sales analytics</text></svg>')
-        icon.write_text(f'<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">'
-                        f'{badge}</svg>')
-    return str(logo), str(icon)
+            f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="230" '
+            f'height="46" viewBox="0 0 230 46"><image href="{mark_data_uri()}" xlink:href="{mark_data_uri()}" '
+            f'x="0" y="1" width="44" height="44"/>'
+            f'<text x="54" y="21" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="16" '
+            f'fill="{c["SB_TEXT"]}">Square Register</text><text x="54" y="38" font-family="Poppins,Arial,sans-serif" '
+            f'font-size="13" fill="{c["SB_TEXT"]}" fill-opacity=".85">Analysis</text></svg>')
+    return str(logo), str(ASSETS / "logo-mark.png")

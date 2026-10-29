@@ -79,6 +79,10 @@ FRIENDLY = [
     (r"email not confirmed", "Please confirm your email first. Check your inbox for the link."),
     (r"user already registered|already been registered", "An account with this email already exists. Try signing in."),
     (r"password should be at least|weak password", f"Choose a stronger password (at least {MIN_PASSWORD} characters)."),
+    (r"error sending (confirmation|recovery|magic link)|email address not authorized|sending email",
+     "We couldn't send the email this step needs. The app's email service isn't set up for this address yet. "
+     "Please contact the app owner."),
+    (r"email rate limit", "Too many emails were sent recently. Please wait an hour and try again."),
     (r"rate limit|too many requests|security purposes", "Too many attempts. Please wait a minute and try again."),
     (r"token has expired|invalid.*(otp|token)", "That code is wrong or has expired. Request a new one."),
     (r"unable to validate email|invalid format", "Please enter a valid email address."),

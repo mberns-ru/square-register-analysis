@@ -17,8 +17,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Databased · Sales Dashboard", page_icon="📊", layout="wide",
-                   initial_sidebar_state="expanded")
+from pathlib import Path  # noqa: E402
+
+st.set_page_config(page_title="Square Register Analysis", layout="wide", initial_sidebar_state="expanded",
+                   page_icon=str(Path(__file__).resolve().parent / "assets" / "favicon.png"))
 
 from core import theme as T  # noqa: E402
 from core.data import Ctx, filter_range, load_dataset, local_sources, signature  # noqa: E402
