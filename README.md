@@ -123,23 +123,36 @@ app runs in **local mode** with no sign-in, reading CSVs as described above.
 
 #### Sign in with Google (optional)
 
-The **Continue with Google** button appears on its own once Google is switched on in Supabase:
+The **Continue with Google** button signs people in on the app's own address (Streamlit's built-in `st.login`), so
+Google's consent screen says **"Sign in to squareanalysis.streamlit.app"** rather than the Supabase project address.
+The app then hands Google's ID token to Supabase, which verifies it and signs the user in to the database.
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), set up the **OAuth consent screen**
-   (**APIs & Services → OAuth consent screen**, External), then go to **Credentials → Create credentials →
-   OAuth client ID**, choose **Web application**, and add this **Authorized redirect URI**:
-   `https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback` (it's shown on Supabase's Google provider page).
-2. In Supabase, open **Authentication → Sign In / Providers → Google**, turn it on, and paste the client ID and
-   client secret.
-3. In **Authentication → URL Configuration → Redirect URLs**, add `https://squareanalysis.streamlit.app/**`
-   (and `http://localhost:8501/**` for local work).
-4. Add `APP_URL = "https://squareanalysis.streamlit.app"` to the app's secrets so Google sends people back to
-   the right address.
+1. **Google Cloud Console → Google Auth Platform → Clients →** your Web client: under **Authorized redirect URIs**
+   add `https://squareanalysis.streamlit.app/oauth2callback` (and `http://localhost:8501/oauth2callback` for local
+   work). Keep the Supabase callback URI too.
+2. **Supabase → Authentication → Sign In / Providers → Google:** turn it on, make sure that client ID is listed
+   under **Client IDs**, and turn on **Skip nonce check**. (Streamlit doesn't expose the one-time nonce it sends
+   to Google, so Supabase can't compare it. The token's signature, audience and expiry are still checked.)
+3. **App secrets:** add an `[auth]` section (generate the cookie secret with
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`):
 
-Google opens in a new tab: Streamlit Cloud runs the app inside a sandboxed frame that isn't allowed to send the
-whole page to Google, so sign-in finishes in that new tab. People who sign up with Google name their business on
-the next screen. The flow uses PKCE: the one-time
-verifier stays on the server for 10 minutes and is matched up when Google sends the browser back.
+   ```toml
+   [auth]
+   redirect_uri = "https://squareanalysis.streamlit.app/oauth2callback"
+   cookie_secret = "a-long-random-string"
+   expose_tokens = ["id"]
+
+   [auth.google]
+   client_id = "YOUR-CLIENT-ID.apps.googleusercontent.com"
+   client_secret = "YOUR-CLIENT-SECRET"
+   server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+   ```
+
+4. *(Optional)* In **Google Auth Platform → Branding**, set the app name to "Databased" and add a logo.
+
+Without the `[auth]` section, the button falls back to Supabase's own Google flow, which opens in a new tab and
+shows the Supabase address on the consent screen. People who sign up with Google name their business on the next
+screen.
 
 Creating an account with email asks for a name, business name, email and password. A database trigger creates
 the business and makes that user its owner. By default Supabase emails a confirmation link before the first

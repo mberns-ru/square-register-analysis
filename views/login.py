@@ -65,22 +65,28 @@ GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(
 
 
 def _google_button(mode: str) -> None:
-    """'Continue with Google' (only shown once the Google provider is enabled in Supabase)."""
-    if not auth.google_enabled():
-        return
-    try:
-        url = auth.google_sign_in_url()
-    except Exception as e:  # noqa: BLE001
-        st.caption(f"Google sign-in is unavailable right now ({e}).")
+    """'Continue with Google', shown once the Google provider is enabled in Supabase."""
+    gmode = auth.google_mode()
+    if gmode is None:
         return
     label = "Continue with Google" if mode == "signin" else "Sign up with Google"
-    # Streamlit Cloud runs the app inside a sandboxed frame that can't send the whole tab to Google, so this is
-    # a native link button that opens Google in a new tab; the sign-in finishes in that tab.
-    st.markdown(f'<style>div.st-key-google_btn a {{ background-image: url("{GOOGLE_G_URI}");'
+    st.markdown(f'<style>div.st-key-google_btn a, div.st-key-google_btn button {{ background-image: url("{GOOGLE_G_URI}");'
                 f' background-repeat: no-repeat; background-position: 18px center; background-size: 18px; }}</style>',
                 unsafe_allow_html=True)
     with st.container(key="google_btn"):
-        st.link_button(label, url, width="stretch", help="Opens Google in a new tab")
+        if gmode == "streamlit":
+            # Signs in on this app's own address (Streamlit's built-in login), then hands the token to Supabase.
+            if st.button(label, key=f"google_{mode}", width="stretch"):
+                auth.start_streamlit_google()
+        else:
+            # Fallback: Supabase's hosted flow. Opens in a new tab because Streamlit Cloud's sandboxed frame
+            # can't send the whole page to Google.
+            try:
+                url = auth.google_sign_in_url()
+            except Exception as e:  # noqa: BLE001
+                st.caption(f"Google sign-in is unavailable right now ({e}).")
+                return
+            st.link_button(label, url, width="stretch", help="Opens Google in a new tab")
     st.markdown(f'<div class="or-divider"><span>or {"use your email" if mode == "signin" else "sign up with email"}'
                 f'</span></div>', unsafe_allow_html=True)
 
@@ -218,8 +224,8 @@ def render_first_business() -> None:
             except auth.AuthError as e:
                 _error(e)
         if st.button("Sign out", type="tertiary"):
-            auth.sign_out()
-            st.rerun()
+            if not auth.sign_out():
+                st.rerun()
 
 
 def sidebar_account() -> None:
@@ -245,5 +251,5 @@ def sidebar_account() -> None:
                 names = {b["business_id"]: b["name"] for b in acct.businesses}
                 st.selectbox("Business", ids, format_func=names.get, key="business_id")
             if st.button("Sign out", key="sign_out", type="secondary", width="stretch", icon=":material/logout:"):
-                auth.sign_out()
-                st.rerun()
+                if not auth.sign_out():
+                    st.rerun()
