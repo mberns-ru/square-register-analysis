@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+
 import streamlit as st
 
 from core import auth
@@ -58,6 +60,10 @@ GOOGLE_G = ('<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
             '0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>')
 
 
+GOOGLE_G_URI = "data:image/svg+xml;base64," + base64.b64encode(
+    GOOGLE_G.replace('aria-hidden="true"', 'xmlns="http://www.w3.org/2000/svg"').encode()).decode()
+
+
 def _google_button(mode: str) -> None:
     """'Continue with Google' (only shown once the Google provider is enabled in Supabase)."""
     if not auth.google_enabled():
@@ -68,11 +74,15 @@ def _google_button(mode: str) -> None:
         st.caption(f"Google sign-in is unavailable right now ({e}).")
         return
     label = "Continue with Google" if mode == "signin" else "Sign up with Google"
-    # target=_top: the hosted app runs in a frame, and Google won't load inside one.
-    st.markdown(
-        f'<a class="google-btn" href="{T.esc(url)}" target="_top" rel="noopener">{GOOGLE_G}<span>{label}</span></a>'
-        f'<div class="or-divider"><span>or {"use your email" if mode == "signin" else "sign up with email"}</span></div>',
-        unsafe_allow_html=True)
+    # Streamlit Cloud runs the app inside a sandboxed frame that can't send the whole tab to Google, so this is
+    # a native link button that opens Google in a new tab; the sign-in finishes in that tab.
+    st.markdown(f'<style>div.st-key-google_btn a {{ background-image: url("{GOOGLE_G_URI}");'
+                f' background-repeat: no-repeat; background-position: 18px center; background-size: 18px; }}</style>',
+                unsafe_allow_html=True)
+    with st.container(key="google_btn"):
+        st.link_button(label, url, width="stretch", help="Opens Google in a new tab")
+    st.markdown(f'<div class="or-divider"><span>or {"use your email" if mode == "signin" else "sign up with email"}'
+                f'</span></div>', unsafe_allow_html=True)
 
 
 def _error(e: Exception) -> None:
