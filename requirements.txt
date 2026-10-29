@@ -2,5 +2,7 @@ streamlit>=1.40
 pandas>=2.0
 plotly>=5.18
 numpy>=1.24
+# Accounts and database (optional: without Supabase keys the app runs in local mode)
+supabase>=2.10
 # Optional: lets Claude plan the AI analyst and read receipts
 anthropic>=0.40

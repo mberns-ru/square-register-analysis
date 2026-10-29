@@ -30,6 +30,7 @@ Square's own exports directly means the owner has one source and no setup.
 | **Seasonality** | Year-over-year monthly sales, a seasonal index, a weekday × hour heatmap and the daypart mix by month |
 | **AI analyst** | A full-width, collapsible panel at the top of every page. Ask questions in plain language; answers use only approved metric functions, and every answer shows the calls it made and the date range |
 | **Reports** | Monthly profit and loss, CSV exports, a printable monthly report, and a data-quality summary |
+| **Sign in** | Email and password accounts on Supabase. Creating an account sets up your business; each business only sees its own data |
 | **Settings** | Change the color scheme: six presets (Lavender, Ocean, Forest, Sunset, Plum, Graphite) or your own primary, accent, background and sidebar colors, with a live preview |
 
 <table>
@@ -37,8 +38,8 @@ Square's own exports directly means the owner has one source and no setup.
 <tr><td align="center">AI analyst</td><td align="center">AI-assisted expense capture</td></tr>
 <tr><td><img src="docs/screenshots/items.png" alt="Items"></td><td><img src="docs/screenshots/forecast.png" alt="Forecast"></td></tr>
 <tr><td align="center">Item performance</td><td align="center">Forecast</td></tr>
-<tr><td><img src="docs/screenshots/settings.png" alt="Settings"></td><td></td></tr>
-<tr><td align="center">Settings: color schemes</td><td></td></tr>
+<tr><td><img src="docs/screenshots/settings.png" alt="Settings"></td><td><img src="docs/screenshots/login.png" alt="Sign in"></td></tr>
+<tr><td align="center">Settings: color schemes</td><td align="center">Sign in / create account</td></tr>
 </table>
 
 ## Getting started
@@ -89,6 +90,37 @@ export ANTHROPIC_MODEL=claude-sonnet-5-5
 
 or add `ANTHROPIC_API_KEY = "sk-ant-..."` to `.streamlit/secrets.toml` (also git-ignored).
 
+### Accounts and database (Supabase)
+
+Sign-in and the database run on [Supabase](https://supabase.com) (hosted PostgreSQL). Without Supabase keys the
+app runs in **local mode** with no sign-in, reading CSVs as described above.
+
+1. **Create a project** at [supabase.com](https://supabase.com/dashboard).
+2. **Create the tables.** Open **SQL Editor**, paste in
+   [`supabase/migrations/20261029000000_init.sql`](supabase/migrations/20261029000000_init.sql) and click **Run**.
+   With the [Supabase CLI](https://supabase.com/docs/guides/cli) you can run `supabase db push` instead.
+3. **Expose the data schemas.** In **Project Settings → Data API → Exposed schemas**, add `core` and
+   `analytics`. Sign-in works without this; the dashboard needs it to read your sales from the database.
+4. **Point emails back at the app.** In **Authentication → URL Configuration**, set **Site URL** to
+   `https://squareanalysis.streamlit.app` (or `http://localhost:8501` for local work).
+5. **Show the reset code in emails.** In **Authentication → Emails → Reset Password**, add `{{ .Token }}` to the
+   template so the email contains the 6-digit code the app asks for.
+6. **Add the keys.** From **Project Settings → API**, copy the project URL and the `anon` (publishable) key into
+   `.streamlit/secrets.toml` (see [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example)) or, for the
+   hosted app, into **App settings → Secrets** on Streamlit Community Cloud:
+
+   ```toml
+   SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co"
+   SUPABASE_ANON_KEY = "eyJ..."
+   ```
+
+   Never put the `service_role` key in the app. Row-level security only protects data when the app uses the
+   anon key.
+
+Creating an account asks for a name, business name, email and password. A database trigger creates the
+business and makes that user its owner. By default Supabase emails a confirmation link before the first
+sign-in; you can turn that off under **Authentication → Sign In / Providers → Email**.
+
 ## How it works
 
 ### The data
@@ -101,6 +133,82 @@ Square exports two kinds of monthly CSV, linked by **Transaction ID**:
 Refunds point back to their original payment through **Payment ID**. Most transactions have no customer
 attached, cash sales have no deposit, and item and category names aren't perfectly consistent, so the app
 treats those fields as plain attributes.
+
+### Database
+
+The SQL in [`supabase/migrations`](supabase/migrations) follows the data model from the pitch, in the three layers
+of the system architecture:
+
+- **`raw`**: every uploaded file (`upload_batches`) and its rows as received, plus `rejected_rows`, so nothing is
+  silently dropped.
+- **`core`**: the ERD below, plus `expenses` and `analyst_questions` (the analyst's question log).
+- **`analytics`**: views the dashboard reads: `daily_sales`, `monthly_sales`, `item_sales_monthly`,
+  `expense_daily` (recurring costs spread across days) and `monthly_pnl`.
+
+Accounts live in `public`: `profiles`, `businesses` and `business_members` (owner, manager or viewer). Every
+business-owned row carries a `business_id`, and row-level security policies limit each signed-in user to the
+businesses they belong to. Members can read; owners and managers can write.
+
+```mermaid
+erDiagram
+    CUSTOMER |o--o{ TRANSACTION : places
+    DEPOSIT |o--o{ TRANSACTION : settles
+    STAFF |o--o{ TRANSACTION : "rings up"
+    REGISTER |o--o{ TRANSACTION : "processed on"
+    TRANSACTION ||--|{ LINE_ITEM : contains
+    TRANSACTION |o--o{ TRANSACTION : "refund of"
+    CUSTOMER {
+        text customer_id PK
+        text display_name
+    }
+    DEPOSIT {
+        text deposit_id PK
+        date deposit_date
+        numeric amount
+    }
+    STAFF {
+        text staff_id PK
+        text staff_name
+    }
+    REGISTER {
+        text register_id PK
+        text device_name
+    }
+    TRANSACTION {
+        text transaction_id PK
+        timestamptz sold_at
+        numeric gross_sales
+        numeric net_sales
+        numeric tax
+        numeric tip
+        numeric fees
+        text payment_id
+        text refunded_payment_id FK
+        text customer_id FK
+        text deposit_id FK
+        text staff_id FK
+        text register_id FK
+    }
+    LINE_ITEM {
+        bigint line_item_id PK
+        text transaction_id FK
+        text item_name
+        text category
+        numeric quantity
+        numeric unit_price
+        numeric net_sales
+    }
+    EXPENSE {
+        uuid expense_id PK
+        date incurred_on
+        text category
+        text vendor
+        numeric amount
+        text status
+    }
+```
+
+Expenses aren't linked to transactions; they're allocated to periods by date and frequency.
 
 ### Ingestion
 
@@ -136,7 +244,11 @@ core/
   metrics.py        approved metric functions (the analyst's only data access)
   analyst.py        question → metric calls (Claude tool use or rule-based)
   expenses.py       expense book, allocation by day, purchase drafting
-views/              one module per page (analyst.py is the panel at the top; settings.py the color schemes)
+  auth.py           Supabase sign-in, sign-up, password reset, business membership
+supabase/
+  migrations/       SQL schema: tables, views, row-level security
+views/              one module per page (analyst.py is the panel at the top; login.py sign-in;
+                    settings.py the color schemes)
 docs/screenshots/   images used in this README
 ```
 
@@ -145,7 +257,8 @@ docs/screenshots/   images used in this README
 - Square exports have no cost data, so item margins use an estimated cost % per category (30% by default).
 - Daily sales are noisy, so the forecast's typical daily miss is about 25%. It doesn't yet account for holidays,
   local events, weather or academic calendars.
-- Expenses live in the browser session. Download them as CSV from the Expenses page and load them back next time.
+- Sales data and expenses still come from CSV uploads and live in the browser session; saving them to the database
+  is the next step. Until then, download expenses as CSV from the Expenses page and load them back next time.
 
 ## Roadmap
 

@@ -174,6 +174,13 @@ div[class*="st-key-card"] {{
 div[class*="st-key-card"] [data-testid="stPlotlyChart"] {{ margin-bottom: -6px; }}
 div[class*="st-key-ans_"] {{ background: {TINT}; border-radius: 16px; padding: 14px 18px; }}
 div[class*="st-key-ans_"] .stPlotlyChart .main-svg {{ background: transparent !important; }}
+section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
+  background: rgba(255,255,255,.14) !important; border: 1px solid {SB_LINE} !important; }}
+section[data-testid="stSidebar"] .stButton > button[kind="secondary"] * {{ color: {SB_TEXT} !important; }}
+div.st-key-sb_account {{ background: rgba(255,255,255,.10); border: 1px solid {SB_LINE}; border-radius: 14px; padding: 12px; }}
+div.st-key-card_auth {{ padding: 30px 32px 24px 32px; min-height: 560px; }}
+div.st-key-card_auth .stTextInput label p, div.st-key-card_firstbiz .stTextInput label p {{ font-size: .8rem; color: {MUTED}; }}
+.stButton > button[kind="tertiary"] {{ background: transparent !important; color: {INDIGO} !important; padding: 0; }}
 div.st-key-card_analyst {{ border-top: 4px solid {INDIGO}; margin-bottom: 8px; }}
 .stPlotlyChart .main-svg {{ background: transparent !important; }}
 
