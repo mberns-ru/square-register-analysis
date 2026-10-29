@@ -28,7 +28,7 @@ from views import analyst, expenses, forecast, items, legal, login, overview, re
 settings.apply_query_params()  # ?theme=ocean etc. in the URL
 T.inject()
 
-# Public pages: readable without signing in (Google's consent screen links to them).
+# Public pages: readable without signing in.
 LEGAL = {
     "privacy": st.Page(legal.render_privacy, title="Privacy Policy", icon=":material/shield:", url_path="privacy"),
     "terms": st.Page(legal.render_terms, title="Terms of Service", icon=":material/gavel:", url_path="terms"),
@@ -38,8 +38,6 @@ LEGAL = {
 # Accounts (Supabase). Without SUPABASE_URL / SUPABASE_ANON_KEY the app runs in local mode.
 # ----------------------------------------------------------------------------
 if auth.enabled():
-    auth.finish_oauth_if_returning()  # back from Supabase's Google flow with ?code=...
-    auth.finish_streamlit_google()    # signed in with Google via st.login: sign in to Supabase too
     if auth.current() is None or not auth.current().businesses:
         gate = (st.Page(login.render, title="Sign in", icon=":material/login:", url_path="signin", default=True)
                 if auth.current() is None else

@@ -12,8 +12,7 @@ Databased is a student-built project that turns Square sales exports into dashbo
 answers. It's offered free of charge for educational and demonstration purposes. It isn't a commercial product and
 is still under development.
 
-Databased isn't affiliated with or endorsed by Block, Inc. (Square), Google, Supabase, Streamlit, Snowflake or
-Anthropic. Their names are used only to describe how the Service works.
+Databased isn't affiliated with or endorsed by Block, Inc. (Square), Supabase, Streamlit, Snowflake or Anthropic. Their names are used only to describe how the Service works.
 
 ## 2. Your account
 

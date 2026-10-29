@@ -17,8 +17,7 @@ what information the app handles, why, and the choices you have.
 
 **Account information.** When you create an account we store your name, email address and business name. If you
 sign up with an email and password, the password is stored only as a secure hash by our authentication provider
-(Supabase); we never see it. If you sign in with Google, Google shares your name, email address, profile picture and
-a Google account identifier with us. We don't receive your Google password or access any other Google data.
+(Supabase); we never see it.
 
 **Business membership.** We record which business you belong to and your role (owner, manager or viewer).
 
@@ -53,15 +52,13 @@ We rely on these providers, each under its own privacy terms:
 
 - **Supabase**: database and sign-in (hosted in the United States, AWS us-east-1)
 - **Streamlit Community Cloud** (Snowflake): hosts the app
-- **Google**: "Sign in with Google", if you choose it
 - **Anthropic**: the optional AI features described above
 
 We may also disclose information if the law requires it.
 
 ## Cookies
 
-If you sign in with Google, the app sets one cookie that keeps you signed in. It's signed so it can't be tampered
-with, and it's removed when you sign out. We don't use analytics or advertising cookies. Streamlit Community Cloud may
+The app only uses the cookies Streamlit needs to work securely. We don't use analytics or advertising cookies. Streamlit Community Cloud may
 collect its own usage statistics as described in its policies.
 
 ## Security
