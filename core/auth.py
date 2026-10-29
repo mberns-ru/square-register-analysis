@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
+import time
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 import streamlit as st
 
@@ -197,7 +200,8 @@ def refresh_businesses() -> None:
 
 def _start_session(user) -> Account:
     meta = getattr(user, "user_metadata", None) or {}
-    acct = Account(user_id=str(user.id), email=user.email or "", full_name=meta.get("full_name", ""))
+    acct = Account(user_id=str(user.id), email=user.email or "",
+                   full_name=meta.get("full_name") or meta.get("name") or "")
     st.session_state.account = acct
     refresh_businesses()
     if acct.businesses and st.session_state.get("business_id") not in {b["business_id"] for b in acct.businesses}:
@@ -207,3 +211,94 @@ def _start_session(user) -> Account:
 
 def current() -> Account | None:
     return st.session_state.get("account")
+
+
+# Sign in with Google (OAuth, PKCE flow) --------------------------------------------------------------------
+# Supabase sends the browser to Google and back to this app with ?code=...; that return trip starts a fresh
+# Streamlit session, so the one-time PKCE verifier is kept server-side for a few minutes under a random flow ID
+# that rides along in the return URL.
+OAUTH_TTL = 600  # seconds
+
+
+@st.cache_resource
+def _pending_oauth() -> dict[str, tuple[str, float]]:
+    return {}
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _enabled_providers(url: str, key: str) -> dict:
+    import httpx
+
+    try:
+        r = httpx.get(f"{url}/auth/v1/settings", headers={"apikey": key}, timeout=5)
+        return r.json().get("external", {}) if r.status_code == 200 else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def google_enabled() -> bool:
+    """True once the Google provider is switched on in Supabase (Authentication → Sign In / Providers)."""
+    if _setting("GOOGLE_SIGN_IN") in ("0", "false", "False"):
+        return False
+    cfg = config()
+    return bool(cfg and _enabled_providers(*cfg).get("google"))
+
+
+def app_url() -> str:
+    """Where Google should send people back to. Set APP_URL in secrets to pin it (recommended when hosted)."""
+    explicit = _setting("APP_URL")
+    if explicit:
+        return explicit.rstrip("/")
+    try:
+        parts = urlsplit(st.context.url)
+        if parts.scheme and parts.netloc:
+            return f"{parts.scheme}://{parts.netloc}"
+    except Exception:  # noqa: BLE001
+        pass
+    return "http://localhost:8501"
+
+
+def google_sign_in_url() -> str:
+    """A fresh Google sign-in link for this browser session (reused until it expires)."""
+    cached = st.session_state.get("_google_url")
+    if cached and time.time() - cached[1] < OAUTH_TTL - 60:
+        return cached[0]
+    flow = secrets.token_urlsafe(18)
+    c = client()
+    res = c.auth.sign_in_with_oauth({
+        "provider": "google",
+        "options": {"redirect_to": f"{app_url()}/?auth_flow={flow}",
+                    "query_params": {"prompt": "select_account"}},
+    })
+    verifier = c.auth._storage.get_item(f"{c.auth._storage_key}-code-verifier")
+    store = _pending_oauth()
+    now = time.time()
+    for k in [k for k, (_, t) in store.items() if now - t > OAUTH_TTL]:
+        store.pop(k, None)
+    store[flow] = (verifier, now)
+    st.session_state._google_url = (res.url, now)
+    return res.url
+
+
+def finish_oauth_if_returning() -> None:
+    """Call at the top of the app: completes a Google sign-in when the browser comes back with ?code=..."""
+    qp = st.query_params
+    flow = qp.get("auth_flow")
+    if not flow or not ({"code", "error", "error_description"} & set(qp.keys())):
+        return
+    code = qp.get("code")
+    err = qp.get("error_description") or qp.get("error")
+    st.query_params.clear()
+    entry = _pending_oauth().pop(flow, None)
+    try:
+        if err:
+            raise AuthError("Google sign-in was cancelled." if "denied" in err.lower() else _friendly(Exception(err)).args[0])
+        if entry is None or time.time() - entry[1] > OAUTH_TTL:
+            raise AuthError("That Google sign-in link expired. Please try again.")
+        res = client().auth.exchange_code_for_session(
+            {"auth_code": code, "code_verifier": entry[0], "redirect_to": f"{app_url()}/?auth_flow={flow}"})
+        _start_session(res.user)
+    except AuthError as e:
+        st.session_state.auth_error = str(e)
+    except Exception as e:  # noqa: BLE001
+        st.session_state.auth_error = str(_friendly(e))

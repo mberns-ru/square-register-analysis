@@ -69,7 +69,7 @@ def _capture_panel(ctx: Ctx) -> None:
 
     with st.form("exp_capture", clear_on_submit=True, border=False):
         text = st.text_area("Describe it", height=90, label_visibility="collapsed",
-                            placeholder="e.g. Went to Restaurant Depot. 6 gallons of whole milk, two 25 lb bags of "
+                            placeholder="e.g. Went to the wholesale club. 6 gallons of whole milk, two 25 lb bags of "
                                         "flour, and a sleeve of 12 oz cups. Spent about $140.")
         receipt = st.file_uploader("Receipt", type=["png", "jpg", "jpeg", "webp", "pdf"],
                                    label_visibility="collapsed")

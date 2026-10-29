@@ -178,6 +178,12 @@ section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
   background: rgba(255,255,255,.14) !important; border: 1px solid {SB_LINE} !important; }}
 section[data-testid="stSidebar"] .stButton > button[kind="secondary"] * {{ color: {SB_TEXT} !important; }}
 div.st-key-sb_account {{ background: rgba(255,255,255,.10); border: 1px solid {SB_LINE}; border-radius: 14px; padding: 12px; }}
+a.google-btn {{ display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  border: 1px solid {LINE}; border-radius: 999px; padding: 9px 16px; background: #fff; color: {INK} !important;
+  font-weight: 500; font-size: .92rem; text-decoration: none !important; margin: 4px 0 2px 0; }}
+a.google-btn:hover {{ background: {TINT}; border-color: {LAVENDER}; }}
+.or-divider {{ display: flex; align-items: center; gap: 10px; color: {MUTED}; font-size: .74rem; margin: 14px 0 4px 0; }}
+.or-divider::before, .or-divider::after {{ content: ""; flex: 1; height: 1px; background: {LINE}; }}
 div.st-key-card_auth {{ padding: 30px 32px 24px 32px; min-height: 560px; }}
 div.st-key-card_auth .stTextInput label p, div.st-key-card_firstbiz .stTextInput label p {{ font-size: .8rem; color: {MUTED}; }}
 .stButton > button[kind="tertiary"] {{ background: transparent !important; color: {INDIGO} !important; padding: 0; }}

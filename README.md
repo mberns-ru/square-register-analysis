@@ -95,30 +95,52 @@ or add `ANTHROPIC_API_KEY = "sk-ant-..."` to `.streamlit/secrets.toml` (also git
 Sign-in and the database run on [Supabase](https://supabase.com) (hosted PostgreSQL). Without Supabase keys the
 app runs in **local mode** with no sign-in, reading CSVs as described above.
 
-1. **Create a project** at [supabase.com](https://supabase.com/dashboard).
-2. **Create the tables.** Open **SQL Editor**, paste in
-   [`supabase/migrations/20261029000000_init.sql`](supabase/migrations/20261029000000_init.sql) and click **Run**.
-   With the [Supabase CLI](https://supabase.com/docs/guides/cli) you can run `supabase db push` instead.
-3. **Expose the data schemas.** In **Project Settings → Data API → Exposed schemas**, add `core` and
+1. **Create a project** at [supabase.com](https://supabase.com/dashboard). (Our project is **Square Analysis**,
+   and steps 2 and 3 below are already done there.)
+2. **Create the tables.** Run each file in [`supabase/migrations`](supabase/migrations) in order, in the
+   **SQL Editor** or with `supabase db push` from the [Supabase CLI](https://supabase.com/docs/guides/cli):
+   - `20261029000000_init.sql`: schemas, tables, views, sign-up trigger and row-level security
+   - `20261029000001_harden_policies.sql`: one policy per action, helper moved to a private schema, FK indexes
+   - `20261029000002_table_grants.sql`: exactly which table privileges the app's roles get
+3. **Check the advisors.** **Advisors → Security Advisor** should show no issues.
+4. **Expose the data schemas.** In **Project Settings → Data API → Exposed schemas**, add `core` and
    `analytics`. Sign-in works without this; the dashboard needs it to read your sales from the database.
-4. **Point emails back at the app.** In **Authentication → URL Configuration**, set **Site URL** to
-   `https://squareanalysis.streamlit.app` (or `http://localhost:8501` for local work).
-5. **Show the reset code in emails.** In **Authentication → Emails → Reset Password**, add `{{ .Token }}` to the
+5. **Point emails back at the app.** In **Authentication → URL Configuration**, set **Site URL** to
+   `https://squareanalysis.streamlit.app` (add `http://localhost:8501` under **Redirect URLs** for local work).
+6. **Show the reset code in emails.** In **Authentication → Emails → Reset Password**, add `{{ .Token }}` to the
    template so the email contains the 6-digit code the app asks for.
-6. **Add the keys.** From **Project Settings → API**, copy the project URL and the `anon` (publishable) key into
+7. **Add the keys.** From **Project Settings → API Keys**, copy the project URL and the **publishable** key into
    `.streamlit/secrets.toml` (see [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example)) or, for the
    hosted app, into **App settings → Secrets** on Streamlit Community Cloud:
 
    ```toml
    SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co"
-   SUPABASE_ANON_KEY = "eyJ..."
+   SUPABASE_ANON_KEY = "sb_publishable_..."
    ```
 
-   Never put the `service_role` key in the app. Row-level security only protects data when the app uses the
-   anon key.
+   Never put the secret (`service_role`) key in the app. Row-level security only protects data when the app uses the
+   publishable key.
 
-Creating an account asks for a name, business name, email and password. A database trigger creates the
-business and makes that user its owner. By default Supabase emails a confirmation link before the first
+#### Sign in with Google (optional)
+
+The **Continue with Google** button appears on its own once Google is switched on in Supabase:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), set up the **OAuth consent screen**
+   (**APIs & Services → OAuth consent screen**, External), then go to **Credentials → Create credentials →
+   OAuth client ID**, choose **Web application**, and add this **Authorized redirect URI**:
+   `https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback` (it's shown on Supabase's Google provider page).
+2. In Supabase, open **Authentication → Sign In / Providers → Google**, turn it on, and paste the client ID and
+   client secret.
+3. In **Authentication → URL Configuration → Redirect URLs**, add `https://squareanalysis.streamlit.app/**`
+   (and `http://localhost:8501/**` for local work).
+4. Add `APP_URL = "https://squareanalysis.streamlit.app"` to the app's secrets so Google sends people back to
+   the right address.
+
+People who sign up with Google name their business on the next screen. The flow uses PKCE: the one-time
+verifier stays on the server for 10 minutes and is matched up when Google sends the browser back.
+
+Creating an account with email asks for a name, business name, email and password. A database trigger creates
+the business and makes that user its owner. By default Supabase emails a confirmation link before the first
 sign-in; you can turn that off under **Authentication → Sign In / Providers → Email**.
 
 ## How it works
@@ -147,7 +169,7 @@ of the system architecture:
 
 Accounts live in `public`: `profiles`, `businesses` and `business_members` (owner, manager or viewer). Every
 business-owned row carries a `business_id`, and row-level security policies limit each signed-in user to the
-businesses they belong to. Members can read; owners and managers can write.
+businesses they belong to. Members can read; owners and managers can write; nobody signed out can read anything.
 
 ```mermaid
 erDiagram
