@@ -12,8 +12,6 @@
 -- businesses they belong to.
 -- =====================================================================================================
 
-create extension if not exists pgcrypto;
-
 create schema if not exists raw;
 create schema if not exists core;
 create schema if not exists analytics;
@@ -293,7 +291,7 @@ create index on core.analyst_questions (business_id, asked_at desc);
 -- Link refunds to their original payments once both are loaded (uploads can arrive in any order).
 create or replace function core.link_refunds(b uuid)
 returns integer
-language sql
+language sql set search_path = ''
 as $$
     with linked as (
         update core.transactions r
@@ -461,6 +459,9 @@ grant usage on schema raw, core, analytics to authenticated;
 grant select, insert, update, delete on all tables in schema raw, core to authenticated;
 grant select on all tables in schema analytics to authenticated;
 grant usage on all sequences in schema core to authenticated;
-grant execute on function core.link_refunds(uuid) to authenticated;
+-- Functions: only signed-in users may call the helpers; trigger functions are never called directly.
+revoke execute on function public.is_member(uuid, text[]), core.link_refunds(uuid),
+    public.handle_new_user(), public.add_creator_as_owner() from public, anon, authenticated;
+grant execute on function public.is_member(uuid, text[]), core.link_refunds(uuid) to authenticated;
 revoke all on all tables in schema raw, core, analytics from anon;
 revoke all on public.profiles, public.businesses, public.business_members from anon;
