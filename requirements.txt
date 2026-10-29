@@ -1,4 +1,6 @@
-streamlit>=1.40
+streamlit>=1.50
+# Google sign-in through st.login
+Authlib>=1.3.2
 pandas>=2.0
 plotly>=5.18
 numpy>=1.24
